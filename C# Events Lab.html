@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>C# Events Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* Layout idea: a mini Visual Studio — left: steps + Properties/Events, centre: the running Form2, right: code + live event log. */
+:root{
+  --bg:#eef1f5;
+  --panel:#ffffff;
+  --ink:#16202c;
+  --muted:#5b6878;
+  --line:#d5dbe3;
+  --accent:#0a62c9;
+  --accent-soft:#e3eefc;
+  --ok:#1a7f37; --ok-soft:#e3f4e8;
+  --warn:#9a6700; --warn-soft:#fdf3d7;
+  --bad:#c62828; --bad-soft:#fde7e7;
+  --code-bg:#f7f8fa;
+  --flash:#fff1b8;
+  --kw:#0033b3; --ty:#267f99; --str:#a31515; --com:#1f7a1f; --num:#098658;
+  --display:"IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --body:"IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --mono:"IBM Plex Mono", Consolas, "Courier New", monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0f141b; --panel:#171e28; --ink:#e4e9f0; --muted:#9aa7b7; --line:#2a3442;
+    --accent:#5aa2ff; --accent-soft:#16283f;
+    --ok:#4ac26b; --ok-soft:#14301d; --warn:#e3b341; --warn-soft:#342812; --bad:#ff7b72; --bad-soft:#3a1715;
+    --code-bg:#111821; --flash:#4a3f12;
+    --kw:#78a9ff; --ty:#4ec9b0; --str:#ce9178; --com:#6a9955; --num:#b5cea8;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0f141b; --panel:#171e28; --ink:#e4e9f0; --muted:#9aa7b7; --line:#2a3442;
+  --accent:#5aa2ff; --accent-soft:#16283f;
+  --ok:#4ac26b; --ok-soft:#14301d; --warn:#e3b341; --warn-soft:#342812; --bad:#ff7b72; --bad-soft:#3a1715;
+  --code-bg:#111821; --flash:#4a3f12;
+  --kw:#78a9ff; --ty:#4ec9b0; --str:#ce9178; --com:#6a9955; --num:#b5cea8;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:14px/1.5 var(--body);padding:16px}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0}
+code,.mono{font-family:var(--mono);font-size:.92em}
+button{font:inherit;cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:12px}
+.top h1{font-size:22px;font-weight:700;letter-spacing:-.01em}
+.top p{margin:2px 0 0;color:var(--muted)}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.btn{border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:6px;padding:6px 12px;display:inline-flex;align-items:center;gap:6px}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.stop{color:var(--bad)}
+.kbd{font:11px var(--mono);border:1px solid currentColor;border-radius:3px;padding:0 4px;opacity:.75}
+.pill{font-size:12px;font-weight:600;border-radius:999px;padding:3px 10px}
+.pill.design{background:var(--accent-soft);color:var(--accent)}
+.pill.run{background:var(--ok-soft);color:var(--ok)}
+.pill.err{background:var(--bad-soft);color:var(--bad)}
+
+.tabs{display:flex;gap:4px;flex-wrap:wrap;border-bottom:1px solid var(--line);margin-bottom:14px}
+.tab{border:1px solid transparent;border-bottom:none;background:none;color:var(--muted);padding:8px 14px;border-radius:6px 6px 0 0;font-weight:500;margin-bottom:-1px}
+.tab[aria-selected="true"]{background:var(--panel);border-color:var(--line);color:var(--ink);font-weight:600}
+.tab .n{font-family:var(--mono);font-size:12px;color:var(--accent);margin-right:6px}
+
+.work{display:grid;grid-template-columns:290px minmax(0,1fr) 400px;gap:14px;align-items:start}
+@media (max-width:1180px){.work{grid-template-columns:280px minmax(0,1fr)}.col-r{grid-column:1 / -1;display:grid;grid-template-columns:1fr 1fr;gap:14px}}
+@media (max-width:780px){.work{grid-template-columns:1fr}.col-r{grid-template-columns:1fr}}
+.col{display:grid;gap:14px;min-width:0}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:8px;overflow:hidden;min-width:0}
+.card > h2{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);padding:9px 12px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:8px}
+.card .bd{padding:12px}
+
+.goal{font-weight:600;margin:0 0 10px}
+.steps{list-style:none;margin:0;padding:0;display:grid;gap:8px;counter-reset:s}
+.steps li{display:grid;grid-template-columns:22px 1fr;gap:8px;counter-increment:s;color:var(--ink)}
+.steps li::before{content:counter(s);width:22px;height:22px;border-radius:50%;border:1.5px solid var(--line);display:grid;place-items:center;font:600 11px var(--mono);color:var(--muted)}
+.steps li.done::before{content:"✓";background:var(--ok);border-color:var(--ok);color:#fff}
+.steps li.done span{color:var(--muted)}
+
+.props{width:100%;border-collapse:collapse;font-size:13px}
+.props th{text-align:left;font-weight:600;font-size:12px;background:var(--code-bg);padding:5px 8px;border-top:1px solid var(--line);color:var(--muted)}
+.props td{padding:4px 8px;border-top:1px solid var(--line);vertical-align:middle}
+.props td:first-child{width:44%;color:var(--muted)}
+.props input[type=text],.props input[type=number],.props select{width:100%;font:13px var(--mono);border:1px solid var(--line);border-radius:4px;padding:3px 6px;background:var(--panel);color:var(--ink)}
+.props input:disabled,.props select:disabled{opacity:.6}
+.evrow{display:flex;justify-content:space-between;align-items:center;gap:6px}
+.evbtn{flex:1;text-align:left;border:1px dashed var(--line);background:none;color:var(--muted);border-radius:4px;padding:3px 6px;font:12px var(--mono)}
+.evbtn:hover{border-color:var(--accent);color:var(--accent)}
+.evbtn.on{border-style:solid;border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
+.evx{border:none;background:none;color:var(--muted);padding:0 4px;font-size:15px}
+.evx:hover{color:var(--bad)}
+.hint{font-size:12px;color:var(--muted);margin:8px 0 0}
+
+/* Simulated Windows form */
+.surface{position:relative;background:repeating-linear-gradient(45deg,var(--code-bg) 0 10px,var(--panel) 10px 20px);border:1px solid var(--line);border-radius:8px;padding:22px;min-height:420px;display:grid;place-items:center}
+.win{width:min(100%,560px);background:#f0f0f0;border:1px solid #6b8fbf;box-shadow:0 8px 28px rgba(0,0,0,.18);font:13px "Segoe UI",Tahoma,sans-serif;color:#000;border-radius:6px 6px 2px 2px;overflow:hidden;user-select:none}
+.win.design{border-style:dashed}
+.win.gone{visibility:hidden}
+.tbar{display:flex;align-items:center;gap:8px;height:32px;padding:0 0 0 10px;background:#fff;border-bottom:1px solid #d9d9d9}
+.tbar .ico{width:14px;height:14px;border-radius:2px;background:linear-gradient(135deg,#3a8dde,#1d5fa8)}
+.tbar .ttl{flex:1;font-size:12px}
+.tbar .ctl{width:44px;height:32px;display:grid;place-items:center;border:none;background:none;color:#000;font-size:13px}
+.tbar .ctl.x:hover{background:#e81123;color:#fff}
+.tbar .ctl[disabled]{color:#999;cursor:default}
+.client{position:relative;height:300px;background:#f0f0f0;cursor:default;touch-action:none}
+.win.design .client{background-image:radial-gradient(#c9c9c9 1px,transparent 1px);background-size:8px 8px}
+.wf-label{position:absolute;padding:1px 2px;white-space:nowrap;font:13px "Segoe UI",Tahoma,sans-serif}
+.wf-text{position:absolute;width:220px;height:24px;border:1px solid #7a7a7a;background:#fff;padding:2px 5px;font:13px "Segoe UI",Tahoma,sans-serif;white-space:pre;overflow:hidden;cursor:text;color:#000}
+.wf-text:focus{outline:none;border-color:#0078d7;box-shadow:inset 0 0 0 1px #0078d7}
+.wf-text .caret{display:inline-block;width:1px;height:15px;background:#000;vertical-align:-3px;animation:blink 1s steps(1) infinite}
+.wf-text:not(:focus) .caret{display:none}
+@keyframes blink{50%{opacity:0}}
+@media (prefers-reduced-motion:reduce){.wf-text .caret{animation:none}}
+.wf-ghost{position:absolute;color:#7a7a7a;font-size:12px;pointer-events:none}
+.tray{margin-top:10px;width:min(100%,560px);border:1px dashed var(--line);border-radius:6px;padding:6px 10px;display:flex;gap:10px;align-items:center;color:var(--muted);font:12px var(--mono);background:var(--panel)}
+.statusline{width:min(100%,560px);margin-top:10px;font-size:12.5px;color:var(--muted);display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.stack{display:grid;justify-items:center;width:100%}
+.loading{position:absolute;inset:0;display:grid;place-items:center;color:var(--muted);font-size:13px;pointer-events:none}
+
+/* MessageBox */
+.mb-veil{position:absolute;inset:0;background:rgba(0,0,0,.12);display:grid;place-items:center;z-index:5;border-radius:8px}
+.mb{min-width:280px;max-width:90%;background:#fff;border:1px solid #6b8fbf;box-shadow:0 10px 30px rgba(0,0,0,.3);font:13px "Segoe UI",Tahoma,sans-serif;color:#000}
+.mb .mbt{height:30px;display:flex;align-items:center;padding:0 10px;font-size:12px;border-bottom:1px solid #e5e5e5}
+.mb .mbb{padding:18px 18px 16px;display:flex;gap:12px;align-items:flex-start}
+.mb .mbi{width:28px;height:28px;border-radius:50%;background:#1d5fa8;color:#fff;display:grid;place-items:center;font-weight:700;flex:none}
+.mb .mbf{background:#f0f0f0;padding:10px;display:flex;justify-content:flex-end;gap:8px}
+.mb .mbf button{min-width:76px;padding:3px 10px;border:1px solid #adadad;background:#e1e1e1;font:13px "Segoe UI",Tahoma,sans-serif;color:#000}
+.mb .mbf button:hover{border-color:#0078d7;background:#e5f1fb}
+.mb .mbf button:first-child{border-color:#0078d7}
+
+/* Code */
+.code{margin:0;font:12.5px/1.6 var(--mono);background:var(--code-bg);padding:10px 0;overflow-x:auto;max-height:360px;overflow-y:auto}
+.code .ln{display:block;padding:0 12px;white-space:pre}
+.hblock{transition:background .4s}
+.hblock.flash{background:var(--flash);transition:none}
+.k{color:var(--kw)}.t{color:var(--ty)}.s{color:var(--str)}.c{color:var(--com);font-style:italic}.nm{color:var(--num)}
+.errs{border-top:1px solid var(--line);font-size:12.5px}
+.errs div{padding:6px 12px;color:var(--bad);background:var(--bad-soft);font-family:var(--mono);font-size:12px}
+.errs .none{color:var(--ok);background:none;font-family:var(--body)}
+.variant{display:flex;gap:6px;flex-wrap:wrap;padding:8px 12px;border-bottom:1px solid var(--line);align-items:center;font-size:12.5px;color:var(--muted)}
+.variant label{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);border-radius:999px;padding:2px 9px;cursor:pointer;color:var(--ink)}
+.variant input{margin:0}
+
+/* Event log */
+.log{list-style:none;margin:0;padding:0;font:12px/1.45 var(--mono);max-height:340px;min-height:180px;overflow-y:auto}
+.log li{display:grid;grid-template-columns:62px 1fr;gap:8px;padding:5px 12px;border-bottom:1px solid var(--line)}
+.log li .tm{color:var(--muted);font-variant-numeric:tabular-nums}
+.log li .ev{font-weight:600}
+.log li .ar{color:var(--muted);word-break:break-word}
+.log li .hd{font-size:11px}
+.log li.ran{box-shadow:inset 3px 0 0 var(--ok)}
+.log li.ran .hd{color:var(--ok)}
+.log li.idle{box-shadow:inset 3px 0 0 var(--line)}
+.log li.idle .ev{color:var(--muted);font-weight:500}
+.log li.idle .hd{color:var(--muted)}
+.log li.note{box-shadow:inset 3px 0 0 var(--warn);background:var(--warn-soft)}
+.log li.note .ev{color:var(--warn)}
+.log .cnt{font-size:11px;color:var(--accent);margin-left:6px}
+.log .empty{display:block;color:var(--muted);font-family:var(--body);padding:14px 12px;border:none}
+.legend{display:flex;gap:12px;flex-wrap:wrap;padding:7px 12px;border-top:1px solid var(--line);font-size:11.5px;color:var(--muted)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+.smallbtn{border:1px solid var(--line);background:none;color:var(--muted);font-size:11px;padding:2px 8px;border-radius:4px;text-transform:none;letter-spacing:0}
+.smallbtn:hover{color:var(--accent);border-color:var(--accent)}
+.watch{font:12.5px var(--mono);padding:10px 12px;display:grid;gap:4px}
+.watch b{color:var(--accent);font-weight:500}
+
+/* Quiz */
+.quiz{max-width:820px;display:grid;gap:14px}
+.q{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:14px 16px}
+.q h3{font-size:15px;font-weight:600;margin-bottom:10px}
+.q h3 .n{font-family:var(--mono);color:var(--accent);margin-right:8px}
+.opts{display:grid;gap:6px}
+.opt{text-align:left;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:6px;padding:7px 10px}
+.opt:hover:not(:disabled){border-color:var(--accent)}
+.opt.right{border-color:var(--ok);background:var(--ok-soft)}
+.opt.wrong{border-color:var(--bad);background:var(--bad-soft)}
+.opt:disabled{cursor:default}
+.expl{margin:10px 0 0;font-size:13px;color:var(--muted)}
+.score{position:sticky;bottom:0;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 16px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.score b{font-size:18px;font-variant-numeric:tabular-nums}
+[hidden]{display:none !important}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div>
+    <h1>C# Events Lab</h1>
+    <p>HNDIT1012 Visual Application Programming · Lab session: mouse, keyboard, form and timer events</p>
+  </div>
+  <div class="toolbar" id="toolbar">
+    <span class="pill design" id="modePill">Design mode</span>
+    <button class="btn primary" id="startBtn" type="button">▶ Start <span class="kbd">F5</span></button>
+    <button class="btn stop" id="stopBtn" type="button" disabled>■ Stop</button>
+    <button class="btn" id="resetBtn" type="button">Reset lab</button>
+  </div>
+</header>
+
+<nav class="tabs" role="tablist" id="tabs"></nav>
+
+<main id="labView" class="work">
+  <div class="col">
+    <section class="card"><h2>Lab steps</h2><div class="bd"><p class="goal" id="goal"></p><ol class="steps" id="steps"></ol></div></section>
+    <section class="card"><h2>Properties</h2><div id="props"></div><p class="hint" style="padding:0 12px 10px">Properties are locked while the app runs, like in Visual Studio.</p></section>
+    <section class="card"><h2>Events <span style="text-transform:none;letter-spacing:0">⚡</span></h2><div class="bd" id="events"></div></section>
+  </div>
+  <div class="col">
+    <section class="surface" id="surface" aria-label="Form designer and running application">
+      <div class="stack">
+        <div class="win design" id="win">
+          <div class="tbar"><span class="ico"></span><span class="ttl" id="wTitle">Form2</span><button class="ctl" type="button" disabled aria-label="Minimise">─</button><button class="ctl" type="button" disabled aria-label="Maximise">☐</button><button class="ctl x" id="wClose" type="button" aria-label="Close form">✕</button></div>
+          <div class="client" id="client"></div>
+        </div>
+        <div class="tray" id="tray" hidden></div>
+        <div class="statusline" id="status"></div>
+      </div>
+    </section>
+    <section class="card" id="watchCard" hidden><h2>Watch</h2><div class="watch" id="watch"></div></section>
+  </div>
+  <div class="col col-r">
+    <section class="card"><h2>Form2.cs</h2><div class="variant" id="variant" hidden></div><pre class="code" id="code"></pre><div class="errs" id="errs"></div></section>
+    <section class="card"><h2>Event log <button class="smallbtn" id="clearLog" type="button">Clear</button></h2><ul class="log" id="log"></ul>
+      <div class="legend"><span><i style="background:var(--ok)"></i>handler ran</span><span><i style="background:var(--line)"></i>event fired, no handler</span><span><i style="background:var(--warn)"></i>note</span></div>
+    </section>
+  </div>
+</main>
+
+<section id="quizView" class="quiz" hidden></section>
+
+<script>
+(() => {
+const $ = (s, r = document) => r.querySelector(s);
+const esc = s => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+/* ---------------- shared state ---------------- */
+const ARGS = {MouseMove:"MouseEventArgs",MouseDown:"MouseEventArgs",MouseUp:"MouseEventArgs",MouseClick:"MouseEventArgs",MouseDoubleClick:"MouseEventArgs",
+  MouseEnter:"EventArgs",MouseLeave:"EventArgs",Click:"EventArgs",DoubleClick:"EventArgs",
+  KeyDown:"KeyEventArgs",KeyUp:"KeyEventArgs",KeyPress:"KeyPressEventArgs",TextChanged:"EventArgs",
+  Load:"EventArgs",Shown:"EventArgs",FormClosing:"FormClosingEventArgs",FormClosed:"FormClosedEventArgs",Tick:"EventArgs"};
+
+let S; // per-lab state, rebuilt on reset
+let current = "mouse";
+let running = false;
+let t0 = performance.now();
+let timers = [];
+let modalOpen = false;
+
+function fresh(){
+  return {
+    mouse:{p:{lblName:"label1"},on:{},seen:{},text:"label1"},
+    click:{p:{},on:{},seen:{},middle:false},
+    key:{p:{pw:""},on:{},seen:{},variant:"star",text:""},
+    form:{p:{},on:{},seen:{},loadMsg:false,title:"Form2"},
+    timer:{p:{name:"label2",text:"label2",back:"Control",fore:"ControlText",enabled:false,interval:100},on:{},seen:{},visible:true,ticks:0}
+  };
+}
+S = fresh();
+
+/* ---------------- labs ---------------- */
+const COLORS = {Control:"#f0f0f0",Red:"#ff0000",Yellow:"#ffff00",White:"#ffffff",Black:"#000000",ControlText:"#000000",Blue:"#0000ff",Lime:"#00ff00"};
+
+const LABS = {
+  mouse:{
+    tab:"Mouse position",
+    goal:"Show the mouse pointer coordinates on a label while the mouse moves over the form.",
+    comps:()=>[{id:"form",name:"Form2",events:["MouseEnter","MouseMove","MouseLeave"]},{id:"lbl",name:S.mouse.p.lblName,events:["MouseMove"]}],
+    props:()=>[
+      {h:"label1 (Label)"},
+      {k:"(Name)",type:"text",get:()=>S.mouse.p.lblName,set:v=>{S.mouse.p.lblName=v.trim()}},
+      {k:"Text",type:"ro",get:()=>S.mouse.text},
+      {k:"Location",type:"ro",get:()=>"200, 40"}],
+    steps:()=>[
+      ["A Label (label1) has been placed on the form.",true],
+      ["Rename the label: set (Name) to mousePos.",S.mouse.p.lblName==="mousePos"],
+      ["In Events, create the Form2 MouseMove handler.",!!S.mouse.on["form.MouseMove"]],
+      ["Start (F5) and move the mouse over the form.",!!S.mouse.seen.moved],
+      ["Hover over the label itself. The log shows the label gets MouseMove and the form gets MouseLeave.",!!S.mouse.seen.label]],
+    body:{"form.MouseMove":()=>["// This method displays the coordinates of the mouse pointer","// on the label box",'mousePos.Text = String.Format("({0}, {1})", e.X, e.Y);']},
+    compile(){
+      const e=[];
+      if(S.mouse.on["form.MouseMove"] && S.mouse.p.lblName!=="mousePos") e.push(`CS0103  The name 'mousePos' does not exist in the current context (Form2.cs). Your label is named '${S.mouse.p.lblName||"(empty)"}'.`);
+      if(!/^[A-Za-z_][A-Za-z0-9_]*$/.test(S.mouse.p.lblName)) e.push("Property value is not valid: (Name) must start with a letter and contain only letters, digits or _.");
+      return e;
+    }
+  },
+  click:{
+    tab:"Mouse buttons",
+    goal:"Show a message box that says which mouse button was clicked on the form.",
+    comps:()=>[{id:"form",name:"Form2",events:["MouseDown","Click","MouseClick","DoubleClick","MouseUp"]}],
+    props:()=>[{h:"Form2 (Form)"},{k:"Text",type:"ro",get:()=>"Form2"},{k:"Size",type:"ro",get:()=>"560, 330"}],
+    steps:()=>[
+      ["In Events, create the Form2 MouseClick handler.",!!S.click.on["form.MouseClick"]],
+      ["Start (F5) and left-click the form.",!!S.click.seen.left],
+      ["Right-click the form.",!!S.click.seen.right],
+      ["Create MouseDown, Click and MouseUp handlers too, click once, and read the order in the log.",!!S.click.seen.order],
+      ["Double-click the form. Which events replace Click on the second click?",!!S.click.seen.dbl],
+      ["Exercise: tick “Add a Middle branch” above the code, then middle-click.",!!S.click.seen.middle]],
+    body:{"form.MouseClick":()=>{
+      const l=["if (e.Button == MouseButtons.Left)",'    MessageBox.Show("You clicked left mouse button");',"else if (e.Button == MouseButtons.Right)",'    MessageBox.Show("You clicked Right mouse button");'];
+      if(S.click.middle) l.push("else if (e.Button == MouseButtons.Middle)",'    MessageBox.Show("You clicked Middle mouse button");');
+      return l;}},
+    compile:()=>[]
+  },
+  key:{
+    tab:"Key masking",
+    goal:"Replace every character typed in textBox1 with *.",
+    comps:()=>[{id:"tb",name:"textBox1",events:["KeyDown","KeyPress","KeyUp","TextChanged"]}],
+    props:()=>[
+      {h:"textBox1 (TextBox)"},
+      {k:"(Name)",type:"ro",get:()=>"textBox1"},
+      {k:"PasswordChar",type:"text",max:1,get:()=>S.key.p.pw,set:v=>{S.key.p.pw=v.slice(0,1)}},
+      {k:"Text",type:"ro",get:()=>S.key.text}],
+    steps:()=>[
+      ["In Events, create the textBox1 KeyPress handler.",!!S.key.on["tb.KeyPress"]],
+      ["Start (F5), click in the text box and type abc.",!!S.key.seen.typed],
+      ["Check the Watch panel: Text really is ***.",!!S.key.seen.typed],
+      ["Press Backspace. KeyChar is '\\b', but the handler turns it into * too.",!!S.key.seen.back],
+      ["Press Shift + K. Compare KeyDown (KeyCode = K, Shift = True) with KeyPress (KeyChar = 'K').",!!S.key.seen.shiftK],
+      ["Better way: stop, remove the KeyPress handler (✕), set PasswordChar to *, run and type. The box shows * but Text keeps the real letters.",!!S.key.seen.pw]],
+    body:{"tb.KeyPress":()=>({
+      star:["e.KeyChar = '*';"],
+      digits:["if (!char.IsDigit(e.KeyChar) && !char.IsControl(e.KeyChar))","    e.Handled = true;   // reject the key"],
+      upper:["e.KeyChar = char.ToUpper(e.KeyChar);"]}[S.key.variant])},
+    compile:()=>[]
+  },
+  form:{
+    tab:"Form lifecycle",
+    goal:"See the order of Load, Shown, FormClosing and FormClosed, and cancel a close.",
+    comps:()=>[{id:"form",name:"Form2",events:["Load","Shown","FormClosing","FormClosed"]}],
+    props:()=>[{h:"Form2 (Form)"},{k:"Text",type:"ro",get:()=>S.form.title},{k:"StartPosition",type:"ro",get:()=>"CenterScreen"}],
+    steps:()=>[
+      ["In Events, create the Load, Shown and FormClosing handlers.",["Load","Shown","FormClosing"].every(e=>S.form.on["form."+e])],
+      ["Start (F5). Load runs before the form is visible, then Shown runs.",!!S.form.seen.shown],
+      ["Click the form’s ✕ and answer No. e.Cancel = true keeps it open.",!!S.form.seen.cancel],
+      ["Click ✕ again and answer Yes. FormClosed fires and the app ends.",!!S.form.seen.closed],
+      ["Tick “Show welcome in Load”, then start again. The message appears before the form.",!!S.form.seen.loadMsg],
+      ["Start, then press ■ Stop. Stop Debugging kills the app without FormClosing.",!!S.form.seen.killed]],
+    body:{
+      "form.Load":()=> S.form.loadMsg?['this.Text = "Events Demo";','MessageBox.Show("Welcome! (shown from Load)");']:['this.Text = "Events Demo";      // title bar'],
+      "form.Shown":()=> S.form.loadMsg?["// welcome message moved to Load"]:['MessageBox.Show("Welcome! Move the mouse over the form.");'],
+      "form.FormClosing":()=>['DialogResult r = MessageBox.Show("Do you really want to exit?",','    "Confirm", MessageBoxButtons.YesNo);',"if (r == DialogResult.No)","    e.Cancel = true;   // keep the form open"]},
+    compile:()=>[]
+  },
+  timer:{
+    tab:"Blinking timer",
+    goal:"Make a red DANGER label with yellow text blink every 300 milliseconds.",
+    comps:()=>[{id:"tmr",name:"timer1",events:["Tick"]}],
+    props:()=>[
+      {h:"Label (Label)"},
+      {k:"(Name)",type:"text",get:()=>S.timer.p.name,set:v=>{S.timer.p.name=v.trim()}},
+      {k:"Text",type:"text",get:()=>S.timer.p.text,set:v=>{S.timer.p.text=v}},
+      {k:"BackColor",type:"select",opts:["Control","Red","Yellow","Blue","White","Black"],get:()=>S.timer.p.back,set:v=>{S.timer.p.back=v}},
+      {k:"ForeColor",type:"select",opts:["ControlText","Yellow","Red","White","Black","Lime"],get:()=>S.timer.p.fore,set:v=>{S.timer.p.fore=v}},
+      {h:"timer1 (Timer)",live:true},
+      {k:"Enabled",type:"bool",live:true,get:()=>S.timer.p.enabled,set:v=>{S.timer.p.enabled=v}},
+      {k:"Interval (ms)",type:"number",live:true,get:()=>S.timer.p.interval,set:v=>{S.timer.p.interval=v}}],
+    steps:()=>[
+      ["Set the label: (Name) lblDanger, Text DANGER, BackColor Red, ForeColor Yellow.",S.timer.p.name==="lblDanger"&&S.timer.p.text==="DANGER"&&S.timer.p.back==="Red"&&S.timer.p.fore==="Yellow"],
+      ["Set timer1 Interval to 300.",S.timer.p.interval===300],
+      ["Set timer1 Enabled to True (the default is False).",S.timer.p.enabled===true],
+      ["In Events, create the timer1 Tick handler.",!!S.timer.on["tmr.Tick"]],
+      ["Start (F5). The label blinks.",!!S.timer.on["tmr.Tick"]&&S.timer.ticks>=4],
+      ["While it runs, change Interval to 1000 and watch it slow down.",!!S.timer.seen.slow]],
+    body:{"tmr.Tick":()=>["lblDanger.Visible = !lblDanger.Visible;"]},
+    compile(){
+      const e=[];
+      if(S.timer.on["tmr.Tick"] && S.timer.p.name!=="lblDanger") e.push(`CS0103  The name 'lblDanger' does not exist in the current context. Your label is named '${S.timer.p.name||"(empty)"}'.`);
+      if(!(S.timer.p.interval>0)) e.push("ArgumentOutOfRangeException: Interval must be greater than 0.");
+      return e;
+    }
+  }
+};
+const ORDER = ["mouse","click","key","form","timer","quiz"];
+
+/* ---------------- tabs ---------------- */
+function renderTabs(){
+  $("#tabs").innerHTML = ORDER.map((id,i)=>`<button class="tab" role="tab" type="button" data-id="${id}" aria-selected="${id===current}"><span class="n">${i<5?"Lab "+(i+1):"Check"}</span>${id==="quiz"?"Quiz":LABS[id].tab}</button>`).join("");
+}
+$("#tabs").addEventListener("click", e=>{
+  const b=e.target.closest(".tab"); if(!b) return;
+  if(running) stop(true);
+  current=b.dataset.id; clearLog(); renderAll();
+});
+
+/* ---------------- event log ---------------- */
+let lastLog=null;
+function stamp(){ const ms=performance.now()-t0; const s=Math.floor(ms/1000); return `${String(Math.floor(s/60)).padStart(2,"0")}:${String(s%60).padStart(2,"0")}.${String(Math.floor(ms%1000)).padStart(3,"0")}`; }
+function clearLog(){ $("#log").innerHTML='<li class="empty">Events appear here as they fire. Press ▶ Start, then use the form.</li>'; lastLog=null; t0=performance.now(); }
+function logLine(kind, ev, args, hd){
+  const ul=$("#log"); const empty=ul.querySelector(".empty"); if(empty) empty.remove();
+  const key=kind+"|"+ev+"|"+hd;
+  if(lastLog && lastLog.key===key && lastLog.li===ul.lastElementChild && (ev.endsWith("MouseMove")||ev.endsWith("Tick"))){
+    lastLog.n++; lastLog.li.querySelector(".ar").textContent=args; lastLog.li.querySelector(".tm").textContent=stamp();
+    lastLog.li.querySelector(".cnt").textContent="×"+lastLog.n; return;
+  }
+  const li=document.createElement("li"); li.className=kind;
+  li.innerHTML=`<span class="tm">${stamp()}</span><span><span class="ev">${esc(ev)}</span><span class="cnt"></span><br><span class="ar">${esc(args)}</span>${hd?`<br><span class="hd">${esc(hd)}</span>`:""}</span>`;
+  ul.appendChild(li); while(ul.children.length>150) ul.firstElementChild.remove();
+  ul.scrollTop=ul.scrollHeight; lastLog={key,li,n:1};
+}
+function note(text){ logLine("note","Note",text,""); }
+$("#clearLog").addEventListener("click", clearLog);
+
+/* fire an event: always logged; handler runs only if attached */
+function fire(compId, ev, args, run){
+  const lab=S[current]; const comp=LABS[current].comps().find(c=>c.id===compId);
+  const name=(comp?comp.name:compId)+"."+ev;
+  const h=lab.on[compId+"."+ev];
+  if(h){ logLine("ran",name,args,`→ ${h}(sender, e) ran`); flash(h); if(run) return run(); }
+  else logLine("idle",name,args,"no handler attached");
+}
+function flash(h){ const b=document.querySelector(`.hblock[data-h="${h}"]`); if(!b) return; b.classList.remove("flash"); void b.offsetWidth; b.classList.add("flash"); setTimeout(()=>b.classList.remove("flash"),180); }
+
+/* ---------------- code view ---------------- */
+const TOK=/(\/\/.*$)|("(?:[^"\\]|\\.)*")|('(?:[^'\\]|\\.)')|\b(namespace|public|partial|class|private|void|object|if|else|return|true|false|new|char|string|int|this)\b|\b(Form|Form2|MouseEventArgs|KeyPressEventArgs|KeyEventArgs|EventArgs|FormClosingEventArgs|FormClosedEventArgs|MessageBox|MouseButtons|String|DialogResult|MessageBoxButtons|Keys)\b|(\b\d+\b)/g;
+function hl(line){
+  let out="",i=0,m; TOK.lastIndex=0;
+  while((m=TOK.exec(line))){ out+=esc(line.slice(i,m.index)); const cls=m[1]?"c":m[2]||m[3]?"s":m[4]?"k":m[5]?"t":"nm"; out+=`<span class="${cls}">${esc(m[0])}</span>`; i=m.index+m[0].length; if(m[1]) break; }
+  return out+esc(line.slice(i));
+}
+function renderCode(){
+  const L=LABS[current], lab=S[current];
+  const ln=t=>`<span class="ln">${hl(t)||" "}</span>`;
+  let html=["namespace HNDITFT2021","{","    public partial class Form2 : Form","    {","        public Form2()","        {","            InitializeComponent();","        }"].map(ln).join("");
+  const handlers=Object.entries(lab.on);
+  for(const [key,h] of handlers){
+    const ev=key.split(".")[1]; const body=(L.body[key]?L.body[key]():["// TODO: your code here"]);
+    html+=`<span class="hblock" data-h="${h}">`+[""," ".repeat(8)+`private void ${h}(object sender, ${ARGS[ev]} e)`,"        {",...body.map(b=>"            "+b),"        }"].map(ln).join("")+"</span>";
+  }
+  if(!handlers.length) html+=ln("")+ln("        // No event handlers yet. Create one from the Events panel.");
+  html+=["    }","}"].map(ln).join("");
+  $("#code").innerHTML=html;
+  const errs=L.compile();
+  $("#errs").innerHTML = errs.length? errs.map(e=>`<div>✕ ${esc(e)}</div>`).join("") : `<div class="none">✓ Build: no errors</div>`;
+  // variant bar
+  const v=$("#variant");
+  if(current==="click"){ v.hidden=false; v.innerHTML=`<label><input type="checkbox" id="midChk" ${S.click.middle?"checked":""} ${running?"disabled":""}> Add a Middle branch (exercise)</label>`;
+    $("#midChk").onchange=e=>{S.click.middle=e.target.checked; renderCode();}; }
+  else if(current==="key"){ v.hidden=false;
+    v.innerHTML=`KeyPress body: `+[["star","e.KeyChar = '*' (slide)"],["digits","digits only"],["upper","uppercase"]].map(([k,t])=>`<label><input type="radio" name="kv" value="${k}" ${S.key.variant===k?"checked":""} ${running?"disabled":""}> ${t}</label>`).join("");
+    v.querySelectorAll("input").forEach(r=>r.onchange=()=>{S.key.variant=r.value; renderCode();}); }
+  else if(current==="form"){ v.hidden=false; v.innerHTML=`<label><input type="checkbox" id="lmChk" ${S.form.loadMsg?"checked":""} ${running?"disabled":""}> Show welcome in Load</label>`;
+    $("#lmChk").onchange=e=>{S.form.loadMsg=e.target.checked; renderCode();}; }
+  else v.hidden=true;
+}
+
+/* ---------------- properties & events panels ---------------- */
+function renderProps(){
+  const rows=LABS[current].props();
+  let h='<table class="props"><tbody>';
+  rows.forEach((r,i)=>{
+    if(r.h){ h+=`<tr><th colspan="2">${esc(r.h)}</th></tr>`; return; }
+    const lock=running && !r.live; const id="p"+i; const val=r.get();
+    let ctl;
+    if(r.type==="ro") ctl=`<span class="mono" id="${id}">${esc(val===""?"(empty)":val)}</span>`;
+    else if(r.type==="text") ctl=`<input type="text" id="${id}" value="${esc(val)}" ${r.max?`maxlength="${r.max}"`:""} ${lock?"disabled":""} spellcheck="false" autocomplete="off">`;
+    else if(r.type==="number") ctl=`<input type="number" id="${id}" value="${val}" step="50" ${lock?"disabled":""}>`;
+    else if(r.type==="bool") ctl=`<select id="${id}" ${lock?"disabled":""}><option ${val?"":"selected"}>False</option><option ${val?"selected":""}>True</option></select>`;
+    else ctl=`<select id="${id}" ${lock?"disabled":""}>${r.opts.map(o=>`<option ${o===val?"selected":""}>${o}</option>`).join("")}</select>`;
+    h+=`<tr><td><label for="${id}">${esc(r.k)}</label></td><td>${ctl}</td></tr>`;
+  });
+  $("#props").innerHTML=h+"</tbody></table>";
+  rows.forEach((r,i)=>{
+    if(!r.set) return; const el=$("#p"+i);
+    const apply=()=>{
+      let v=el.value;
+      if(r.type==="bool") v=(v==="True"); if(r.type==="number") v=Number(v);
+      r.set(v);
+      if(current==="timer" && r.live && running){ note(`timer1.${r.k.split(" ")[0]} = ${r.type==="bool"?(v?"true":"false"):v};  (changed at run time)`); if(r.type==="number"&&v===1000) S.timer.seen.slow=true; restartTimer(); }
+      renderForm(); renderCode(); renderSteps(); renderEvents();
+    };
+    el.addEventListener(r.type==="text"?"input":"change", apply);
+  });
+}
+function renderEvents(){
+  const lab=S[current];
+  $("#events").innerHTML=LABS[current].comps().map(c=>`<div style="margin-bottom:10px"><div class="mono" style="font-size:12px;color:var(--muted);margin-bottom:4px">${esc(c.name)}</div>`+
+    c.events.map(ev=>{ const k=c.id+"."+ev, h=lab.on[k];
+      return `<div class="evrow" style="margin:3px 0"><span style="width:96px;font-size:12.5px">${ev}</span><button type="button" class="evbtn ${h?"on":""}" data-k="${k}" data-n="${esc(c.name)}" ${running?"disabled":""}>${h?esc(h):"click to create"}</button>${h&&!running?`<button type="button" class="evx" data-x="${k}" aria-label="Remove ${esc(h)}">✕</button>`:""}</div>`;}).join("")+"</div>").join("")+
+    `<p class="hint">In Visual Studio: select the control, open the ⚡ Events list in Properties, double-click the event.</p>`;
+}
+$("#events").addEventListener("click", e=>{
+  if(running) return;
+  const b=e.target.closest(".evbtn"), x=e.target.closest(".evx"); const lab=S[current];
+  if(x){ delete lab.on[x.dataset.x]; }
+  else if(b && !lab.on[b.dataset.k]){ lab.on[b.dataset.k]=b.dataset.n+"_"+b.dataset.k.split(".")[1]; }
+  else return;
+  renderEvents(); renderCode(); renderSteps();
+});
+function renderSteps(){
+  const L=LABS[current]; $("#goal").textContent=L.goal;
+  $("#steps").innerHTML=L.steps().map(([t,d])=>`<li class="${d?"done":""}"><span>${esc(t)}</span></li>`).join("");
+}
+
+/* ---------------- MessageBox (modal to the form) ---------------- */
+function msgBox(text, caption="", buttons=["OK"]){
+  return new Promise(res=>{
+    modalOpen=true;
+    const v=document.createElement("div"); v.className="mb-veil";
+    v.innerHTML=`<div class="mb" role="dialog" aria-modal="true" aria-label="${esc(caption||"Message")}"><div class="mbt">${esc(caption)}</div><div class="mbb"><span class="mbi">${buttons.length>1?"?":"i"}</span><span>${esc(text)}</span></div><div class="mbf">${buttons.map(b=>`<button type="button">${b}</button>`).join("")}</div></div>`;
+    $("#surface").appendChild(v);
+    const bs=v.querySelectorAll("button"); bs[0].focus();
+    bs.forEach(b=>b.onclick=()=>{ v.remove(); modalOpen=false; res(b.textContent); });
+  });
+}
+
+/* ---------------- form rendering per lab ---------------- */
+let over=null, kbText=null;
+function renderForm(){
+  const win=$("#win"), cl=$("#client"); win.classList.toggle("design",!running); win.classList.remove("gone");
+  $("#wTitle").textContent = current==="form" ? S.form.title : "Form2";
+  $("#tray").hidden=true; $("#watchCard").hidden=true;
+  const st=$("#status");
+  if(current==="mouse"){
+    cl.innerHTML=`<span class="wf-label" id="mLbl" style="left:200px;top:40px">${esc(S.mouse.text)}</span>`;
+    st.innerHTML=running?"Move the mouse over the form, then over the label.":"Designer: the dotted grid means you are editing, not running.";
+  } else if(current==="click"){
+    cl.innerHTML=`<span class="wf-ghost" style="left:16px;top:12px">(empty form: click anywhere, try left, right, middle and double-click)</span>`;
+    st.innerHTML=running?"Left, right, middle and double-click the form.":"Create the MouseClick handler, then press Start.";
+  } else if(current==="key"){
+    cl.innerHTML=`<span class="wf-label" style="left:60px;top:62px;pointer-events:none">Password</span><div class="wf-text" id="tb" style="left:140px;top:58px" tabindex="${running?0:-1}" role="textbox" aria-label="textBox1"></div>`;
+    kbText=$("#tb"); paintText();
+    $("#watchCard").hidden=false; paintWatch();
+    st.innerHTML=running?"Click in the text box and type.":"Create the KeyPress handler, then press Start.";
+  } else if(current==="form"){
+    cl.innerHTML=`<span class="wf-label" style="left:24px;top:24px;pointer-events:none">label1</span>`;
+    st.innerHTML=running?"Close the form with its ✕ button.":"Create the handlers, then press Start.";
+  } else if(current==="timer"){
+    const p=S.timer.p;
+    cl.innerHTML=`<span class="wf-label" id="dLbl" style="left:220px;top:120px;font-weight:600;background:${COLORS[p.back]};color:${COLORS[p.fore]};${running&&!S.timer.visible?"visibility:hidden":""}">${esc(p.text)}</span>`;
+    if(!running){ $("#tray").hidden=false; $("#tray").innerHTML=`<span>Component tray:</span><span>⏱ timer1</span><span style="margin-left:auto">Enabled=${p.enabled?"True":"False"} · Interval=${p.interval}</span>`; }
+    st.innerHTML=running?(p.enabled?`Ticks: <b class="mono" id="tickN">${S.timer.ticks}</b> · one full blink = 2 × ${p.interval} ms = ${(2*p.interval/1000).toFixed(1)} s`:"Running, but timer1.Enabled is False, so Tick never fires."):"Timers are not drawn on the form. They sit in the component tray below it.";
+  }
+}
+function paintText(){
+  if(!kbText) return;
+  const t=S.key.text, shown=S.key.p.pw? S.key.p.pw.repeat(t.length) : t;
+  kbText.innerHTML=esc(shown)+'<span class="caret"></span>';
+}
+function paintWatch(){
+  const shown=S.key.p.pw? S.key.p.pw.repeat(S.key.text.length): S.key.text;
+  $("#watch").innerHTML=`<div>textBox1.Text = <b>"${esc(S.key.text)}"</b></div><div>textBox1.TextLength = <b>${S.key.text.length}</b></div><div>On screen&nbsp;&nbsp;&nbsp;&nbsp;= <b>"${esc(shown)}"</b></div>`;
+}
+
+/* ---------------- mouse labs ---------------- */
+const client=$("#client");
+function pos(e, el){ const r=el.getBoundingClientRect(); return {x:Math.round(e.clientX-r.left), y:Math.round(e.clientY-r.top)}; }
+const BTN=["Left","Middle","Right"];
+let lastMove=0;
+client.addEventListener("pointermove", e=>{
+  if(!running||modalOpen||current!=="mouse") return;
+  const lbl=$("#mLbl"); const onLbl=lbl && lbl.contains(e.target);
+  const now=performance.now();
+  if(onLbl){
+    if(over!=="lbl"){ if(over==="form") fire("form","MouseLeave","EventArgs.Empty  (pointer moved onto a child control)"); fire("lbl","MouseEnter","EventArgs.Empty"); over="lbl"; }
+    const p=pos(e,lbl); if(!S.mouse.seen.label){ S.mouse.seen.label=true; renderSteps(); }
+    if(now-lastMove>60){ lastMove=now; fire("lbl","MouseMove",`Button=None, X=${p.x}, Y=${p.y}  (relative to the label)`); }
+  } else {
+    if(over!=="form"){ if(over==="lbl") fire("lbl","MouseLeave","EventArgs.Empty"); fire("form","MouseEnter","EventArgs.Empty"); over="form"; }
+    const p=pos(e,client);
+    if(S.mouse.on["form.MouseMove"]){ S.mouse.text=`(${p.x}, ${p.y})`; lbl.textContent=S.mouse.text; }
+    if(now-lastMove>60){ lastMove=now; fire("form","MouseMove",`Button=None, X=${p.x}, Y=${p.y}`); if(!S.mouse.seen.moved){S.mouse.seen.moved=true; renderSteps();} }
+  }
+});
+client.addEventListener("pointerleave", ()=>{
+  if(!running||current!=="mouse") return;
+  if(over==="lbl") fire("lbl","MouseLeave","EventArgs.Empty"); if(over==="form") fire("form","MouseLeave","EventArgs.Empty"); over=null;
+});
+client.addEventListener("contextmenu", e=>{ if(running && current==="click") e.preventDefault(); });
+let downCount=1;
+client.addEventListener("mousedown", e=>{
+  if(!running||modalOpen||current!=="click") return;
+  e.preventDefault(); const p=pos(e,client); downCount=(e.detail>=2 && e.detail%2===0)?2:1;
+  fire("form","MouseDown",`Button=${BTN[e.button]||"None"}, Clicks=${downCount}, X=${p.x}, Y=${p.y}`);
+});
+client.addEventListener("mouseup", async e=>{
+  if(!running||modalOpen||current!=="click") return;
+  const p=pos(e,client), b=BTN[e.button]||"None", args=`Button=${b}, Clicks=${downCount}, X=${p.x}, Y=${p.y}`;
+  let pending=null;
+  if(downCount===2){
+    fire("form","DoubleClick","EventArgs.Empty  (second click: Click/MouseClick do not fire again)");
+    S.click.seen.dbl=true;
+  } else {
+    fire("form","Click","EventArgs.Empty  (no button information)");
+    fire("form","MouseClick",args,()=>{
+      if(b==="Left"){S.click.seen.left=true; pending="You clicked left mouse button";}
+      else if(b==="Right"){S.click.seen.right=true; pending="You clicked Right mouse button";}
+      else if(b==="Middle" && S.click.middle){S.click.seen.middle=true; pending="You clicked Middle mouse button";}
+      else note(`e.Button == MouseButtons.${b}: no branch matched, so nothing happens.`);
+    });
+    if(["form.MouseDown","form.Click","form.MouseUp","form.MouseClick"].every(k=>S.click.on[k])) S.click.seen.order=true;
+  }
+  fire("form","MouseUp",args);
+  renderSteps();
+  if(pending) await msgBox(pending);
+});
+
+/* ---------------- keyboard lab ---------------- */
+function keyCode(e){
+  const c=e.code||"";
+  if(/^Key[A-Z]$/.test(c)) return c.slice(3);
+  if(/^Digit\d$/.test(c)) return "D"+c.slice(5);
+  if(/^Numpad\d$/.test(c)) return "NumPad"+c.slice(6);
+  const map={ShiftLeft:"ShiftKey",ShiftRight:"ShiftKey",ControlLeft:"ControlKey",ControlRight:"ControlKey",AltLeft:"Menu",AltRight:"Menu",Backspace:"Back",Enter:"Return",NumpadEnter:"Return",Space:"Space",ArrowLeft:"Left",ArrowRight:"Right",ArrowUp:"Up",ArrowDown:"Down",Escape:"Escape",Tab:"Tab",CapsLock:"Capital"};
+  return map[c] || c || e.key;
+}
+const show=ch=>({"\b":"\\b","\r":"\\r","\u001b":"\\u001b"})[ch]||ch;
+document.addEventListener("keydown", e=>{
+  if(e.key==="F5"){ e.preventDefault(); running?null:start(); return; }
+  if(!running||current!=="key"||modalOpen||document.activeElement!==kbText) return;
+  if(e.key==="Tab") return;
+  e.preventDefault();
+  fire("tb","KeyDown",`KeyCode=${keyCode(e)}, Shift=${e.shiftKey?"True":"False"}, Control=${e.ctrlKey?"True":"False"}, Alt=${e.altKey?"True":"False"}${e.repeat?"  (auto-repeat)":""}`);
+  let ch=null;
+  if(e.ctrlKey||e.metaKey||e.altKey) ch=null;
+  else if(e.key.length===1) ch=e.key;
+  else if(e.key==="Backspace") ch="\b";
+  else if(e.key==="Enter") ch="\r";
+  else if(e.key==="Escape") ch="\u001b";
+  if(ch===null){ if(["Shift","Control","Alt","F1","F2","ArrowLeft","ArrowRight","ArrowUp","ArrowDown"].includes(e.key)) note(`${keyCode(e)} produces no character, so KeyPress does not fire.`); return; }
+  if(ch==="K" && e.shiftKey) S.key.seen.shiftK=true;
+  const pe={KeyChar:ch,Handled:false};
+  fire("tb","KeyPress",`KeyChar='${show(ch)}'`,()=>{
+    const v=S.key.variant;
+    if(v==="star"){ pe.KeyChar="*"; }
+    else if(v==="digits"){ if(!/\d/.test(ch) && ch>=" ") pe.Handled=true; }
+    else if(v==="upper"){ pe.KeyChar=ch.toUpperCase(); }
+    if(ch==="\b" && v==="star") S.key.seen.back=true;
+    note(pe.Handled?`e.Handled = true: the key '${show(ch)}' is rejected.`:pe.KeyChar!==ch?`e.KeyChar changed '${show(ch)}' → '${show(pe.KeyChar)}' before it reaches the text box.`:`e.KeyChar unchanged: '${show(ch)}'.`);
+  });
+  if(!pe.Handled){
+    const before=S.key.text; const k=pe.KeyChar;
+    if(k==="\b") S.key.text=before.slice(0,-1);
+    else if(k>=" ") S.key.text=before+k;
+    if(S.key.text!==before){
+      fire("tb","TextChanged","EventArgs.Empty");
+      if(S.key.on["tb.KeyPress"] && S.key.variant==="star" && S.key.text.length>=3) S.key.seen.typed=true;
+      if(S.key.p.pw && !S.key.on["tb.KeyPress"] && /[^*]/.test(S.key.text)) S.key.seen.pw=true;
+    }
+  }
+  paintText(); paintWatch(); renderSteps();
+  $("#props") && renderProps();
+});
+document.addEventListener("keyup", e=>{
+  if(!running||current!=="key"||document.activeElement!==kbText||e.key==="Tab") return;
+  fire("tb","KeyUp",`KeyCode=${keyCode(e)}, Shift=${e.shiftKey?"True":"False"}`);
+});
+
+/* ---------------- form lifecycle lab ---------------- */
+async function startForm(){
+  const win=$("#win"); win.classList.add("gone");
+  const ld=document.createElement("div"); ld.className="loading"; ld.textContent="Form2 is loading… (not visible yet)"; $("#surface").appendChild(ld);
+  await wait(500);
+  await fire("form","Load","EventArgs.Empty  (form not visible yet)",async()=>{
+    S.form.title="Events Demo"; $("#wTitle").textContent=S.form.title;
+    if(S.form.loadMsg){ S.form.seen.loadMsg=true; renderSteps(); await msgBox("Welcome! (shown from Load)"); }
+  });
+  if(!running){ ld.remove(); return; }
+  await wait(400); ld.remove(); win.classList.remove("gone");
+  await fire("form","Shown","EventArgs.Empty  (form is now on screen)",async()=>{
+    S.form.seen.shown=true; renderSteps();
+    if(!S.form.loadMsg) await msgBox("Welcome! Move the mouse over the form.");
+  });
+  S.form.seen.shown=true; renderSteps(); renderProps();
+}
+$("#wClose").addEventListener("click", async ()=>{
+  if(!running||modalOpen) return;
+  if(current!=="form"){ stop(); return; }
+  let cancel=false;
+  await fire("form","FormClosing","CloseReason=UserClosing, Cancel=False",async()=>{
+    const r=await msgBox("Do you really want to exit?","Confirm",["Yes","No"]);
+    if(r==="No"){ cancel=true; S.form.seen.cancel=true; note("e.Cancel = true, so the form stays open and FormClosed does not fire."); }
+  });
+  if(cancel){ renderSteps(); return; }
+  fire("form","FormClosed","CloseReason=UserClosing");
+  S.form.seen.closed=true; note("Application exited.");
+  $("#win").classList.add("gone"); stop(false, true);
+});
+const wait=ms=>new Promise(r=>{ const id=setTimeout(r,ms); timers.push(id); });
+
+/* ---------------- timer lab ---------------- */
+let tickId=null;
+function restartTimer(){
+  clearInterval(tickId); tickId=null;
+  if(!running||current!=="timer"||!S.timer.p.enabled||!(S.timer.p.interval>0)) { renderForm(); return; }
+  tickId=setInterval(()=>{
+    fire("tmr","Tick","EventArgs.Empty",()=>{ S.timer.visible=!S.timer.visible; const l=$("#dLbl"); if(l) l.style.visibility=S.timer.visible?"visible":"hidden"; });
+    S.timer.ticks++; const n=$("#tickN"); if(n) n.textContent=S.timer.ticks; if(S.timer.ticks===4) renderSteps();
+  }, S.timer.p.interval);
+  renderForm();
+}
+
+/* ---------------- run / stop ---------------- */
+function setMode(){
+  const pill=$("#modePill");
+  pill.className="pill "+(running?"run":"design"); pill.textContent=running?"Running":"Design mode";
+  $("#startBtn").disabled=running; $("#stopBtn").disabled=!running;
+}
+function start(){
+  if(current==="quiz"||running) return;
+  const errs=LABS[current].compile();
+  if(errs.length){ const pill=$("#modePill"); pill.className="pill err"; pill.textContent="Build failed"; note("Build failed. Fix the errors under the code, then start again."); renderCode(); return; }
+  running=true; over=null; setMode();
+  if(current==="mouse") S.mouse.text="label1";
+  if(current==="timer") { S.timer.visible=true; S.timer.ticks=0; }
+  if(current==="form") S.form.title="Form2";
+  logLine("note","▶ Start","Build succeeded. Form2 is running.","");
+  renderAll(true);
+  if(current==="form") startForm();
+  if(current==="timer") restartTimer();
+  if(current==="key") setTimeout(()=>kbText&&kbText.focus(),0);
+}
+function stop(silent, closedNormally){
+  if(!running) return;
+  running=false; clearInterval(tickId); tickId=null; timers.forEach(clearTimeout); timers=[];
+  document.querySelectorAll(".mb-veil,.loading").forEach(n=>n.remove()); modalOpen=false;
+  if(current==="form" && !closedNormally && !silent){ S.form.seen.killed=true; note("Stop Debugging ends the process at once: FormClosing and FormClosed never fire."); }
+  else if(!silent && !closedNormally) logLine("note","■ Stop","Debugging stopped.","");
+  S.mouse.text="label1"; S.timer.visible=true; S.form.title="Form2";
+  setMode(); renderAll(true);
+}
+$("#startBtn").addEventListener("click", start);
+$("#stopBtn").addEventListener("click", ()=>stop());
+$("#resetBtn").addEventListener("click", ()=>{ if(running) stop(true); const k=current; const f=fresh(); if(k!=="quiz") S[k]=f[k]; else quizState={}; clearLog(); renderAll(); });
+
+/* ---------------- quiz ---------------- */
+const QUIZ=[
+  {q:"You click a button once with the left mouse button. In what order do the events fire?",o:["MouseDown → MouseUp → Click","MouseDown → Click → MouseClick → MouseUp","Click → MouseDown → MouseUp","MouseClick → Click → MouseDown → MouseUp"],a:1,e:"Lab 2 shows it in the log: MouseDown, then Click and MouseClick, then MouseUp."},
+  {q:"Which handler can tell you which mouse button was pressed?",o:["Click(object sender, EventArgs e)","MouseClick(object sender, MouseEventArgs e)","Load(object sender, EventArgs e)","Tick(object sender, EventArgs e)"],a:1,e:"Only MouseEventArgs has the Button property. Click receives a plain EventArgs."},
+  {q:"mousePos.Text = String.Format(\"({0}, {1})\", e.X, e.Y); The pointer is 150 px from the left and 80 px from the top of the form. What does the label show?",o:["(80, 150)","150, 80","(150, 80)","{0}, {1}"],a:2,e:"{0} is replaced by e.X (150) and {1} by e.Y (80). The brackets are part of the format string."},
+  {q:"The user presses F1 inside a text box. Which event does NOT fire?",o:["KeyDown","KeyPress","KeyUp","None, all three fire"],a:1,e:"KeyPress fires only when a key produces a character. F1, Shift and the arrow keys produce none."},
+  {q:"The user presses Shift + K. What is e.KeyChar in the KeyPress handler?",o:["'k'","'K'","Keys.K","Keys.Shift | Keys.K"],a:1,e:"KeyPressEventArgs gives the composed character, so Shift is already applied. KeyDown would report KeyCode = K with Shift = True."},
+  {q:"Why does e.KeyChar = \"*\"; fail to compile?",o:["KeyChar is read-only","\"*\" is a string; KeyChar is a char and needs '*'","The handler must return a value","* is a reserved symbol"],a:1,e:"Single quotes make a char literal. Double quotes make a string."},
+  {q:"You want a password box that shows * but keeps the real password in textBox1.Text. Best option?",o:["e.KeyChar = '*' in KeyPress","Set the PasswordChar property to *","Handle TextChanged and replace the text","Set ReadOnly to True"],a:1,e:"PasswordChar masks only the display. The KeyPress trick replaces the stored characters, so the real password is lost."},
+  {q:"A Timer has Interval = 300 and Enabled = False. You start the app. How many times does Tick fire in 3 seconds?",o:["10","3","0","300"],a:2,e:"A disabled timer never raises Tick. Enabled defaults to False, so set it to True or call timer1.Start()."},
+  {q:"With Interval = 300, the Tick handler runs lblDanger.Visible = !lblDanger.Visible; How long is one full blink (hidden and shown again)?",o:["300 ms","600 ms","150 ms","3 s"],a:1,e:"Each tick flips Visible once. Hidden then shown takes two ticks: 2 × 300 ms = 600 ms."},
+  {q:"Which form event lets you stop the form from closing?",o:["Load","Shown","FormClosing, by setting e.Cancel = true","FormClosed"],a:2,e:"FormClosing runs before the close and can cancel it. FormClosed runs after the form has already closed."},
+  {q:"A MessageBox.Show() call placed in the Load handler appears…",o:["after the form is visible","before the form is visible","only when the form closes","never; MessageBox cannot be used in Load"],a:1,e:"Load runs before the form is first displayed. Use Shown for something that must appear on top of the visible form."},
+  {q:"While the mouse moves over a label placed on the form, which control receives MouseMove?",o:["The form","The label","Both the form and the label","Neither"],a:1,e:"The control under the pointer receives the event. That is why the mousePos label stops updating when you hover over it."}
+];
+let quizState={};
+function renderQuiz(){
+  const done=QUIZ.filter((_,i)=>quizState[i]!==undefined).length, right=Object.values(quizState).filter(Boolean).length;
+  $("#quizView").innerHTML=QUIZ.map((x,i)=>{
+    const ans=quizState[i]; const answered=ans!==undefined;
+    return `<article class="q"><h3><span class="n">Q${i+1}</span>${esc(x.q)}</h3><div class="opts">${x.o.map((o,j)=>{
+      let cls=""; if(answered){ if(j===x.a) cls="right"; else if(quizState["c"+i]===j) cls="wrong"; }
+      return `<button type="button" class="opt ${cls}" data-q="${i}" data-o="${j}" ${answered?"disabled":""}>${esc(o)}</button>`;}).join("")}</div>${answered?`<p class="expl"><b style="color:${ans?"var(--ok)":"var(--bad)"}">${ans?"Correct.":"Not quite."}</b> ${esc(x.e)}</p>`:""}</article>`;
+  }).join("")+`<div class="score"><span>Score: <b>${right} / ${QUIZ.length}</b> <span style="color:var(--muted)">(${done} answered)</span></span><button class="btn" type="button" id="qReset">Try again</button></div>`;
+}
+$("#quizView").addEventListener("click", e=>{
+  const b=e.target.closest(".opt");
+  if(b){ const i=+b.dataset.q, j=+b.dataset.o; if(quizState[i]!==undefined) return; quizState[i]=(j===QUIZ[i].a); quizState["c"+i]=j; renderQuiz(); return; }
+  if(e.target.id==="qReset"){ quizState={}; renderQuiz(); }
+});
+
+/* ---------------- render all ---------------- */
+function renderAll(keepLog){
+  renderTabs();
+  const quiz=current==="quiz";
+  $("#labView").hidden=quiz; $("#quizView").hidden=!quiz; $("#toolbar").style.visibility=quiz?"hidden":"visible";
+  if(quiz){ renderQuiz(); return; }
+  setMode(); renderSteps(); renderProps(); renderEvents(); renderCode(); renderForm();
+}
+clearLog(); renderAll();
+})();
+</script>
+</body>
+</html>
